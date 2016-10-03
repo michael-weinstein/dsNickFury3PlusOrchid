@@ -46,7 +46,7 @@ def main():
         nodeNumber = int(nodeNumber)
     except ValueError:
         nodeNumber = False
-    if nodeNumber and nodeNumber in [2210, 2211, 2212, 2213, 2214, 2215, 2216, 2217, 2218, 2219, 2220]:  #This seems to be a bad group of nodes.
+    if False and nodeNumber and nodeNumber in [2210, 2211, 2212, 2213, 2214, 2215, 2216, 2217, 2218, 2219, 2220]:  #This seems to be a bad group of nodes.
         import sys
         sys.exit(99)
     if not args.job:

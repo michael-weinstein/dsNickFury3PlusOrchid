@@ -63,7 +63,7 @@ class Elevation:
         if not skipTest:
             self.testModel()
             
-    def predict(self, onTarget, offTargets, blockSize = 0):
+    def predictBlock(self, onTarget, offTargets, blockSize = 0):
         import numpy
         onTarget = onTarget.replace("_","")
         offTargets = offTargets.replace("_","")
@@ -93,6 +93,31 @@ class Elevation:
             #touchFile = open("progressCounter/incorporated" + str(counter) + ".progress", 'w')
             #touchFile.close()
             counter += 1
+        return results
+    
+    def predict(self, onTarget, offTargets):
+        import numpy
+        onTarget = onTarget.replace("_","")
+        offTargets = offTargets.replace("_","")
+        onTarget = onTarget.upper()
+        offTargets = offTargets.upper()
+        validated = self.validateSeq(onTarget)
+        offTargetList = offTargets.split(",")
+        for seq in offTargetList:
+            validated = self.validateSeq(seq)
+        results = []
+        #touchFile = open("progressCounter/start" + str(counter) + ".progress", 'w')
+        #touchFile.close()
+        #print("Running elevation model on %s sites." %(len(offTargetList)))
+        npResults = self.model.execute([onTarget] * len(offTargetList), offTargetList)
+        #touchFile = open("progressCounter/ran" + str(counter) + ".progress", 'w')
+        #touchFile.close()
+        if not len(npResults["CFD"]) == len(npResults["linear-raw-stacker"]):
+            raise RuntimeError("CFD result and stacker result should have the same number of elements.")
+        for i in range(0,len(npResults["CFD"])):
+            results.append((npResults["CFD"][i][0],npResults["linear-raw-stacker"][i]))  #append a tuple
+        #touchFile = open("progressCounter/incorporated" + str(counter) + ".progress", 'w')
+        #touchFile.close()
         return results
         
     def validateSeq(self, seq):

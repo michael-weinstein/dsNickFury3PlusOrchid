@@ -211,10 +211,11 @@ class Args(object):
         parser.add_argument ("--lastExon", help = "Flag this site as being in the last exon of a gene", action = "store_true")
         parser.add_argument ("--azureTableOut", help = "Output results to an azure table.  Argument should be formatted as account,tableName,partitionKey,rowKey")
         parser.add_argument ("--endClip", help = "Ignore the last n bases (distal to PAM) when matching", type = int, default = 0)
-        parser.add_argument ("--matchSiteCutoff", help = "Stop searching after finding this number of potential mismatches (set to 0 for no limit)", type = int, default = 5000)
+        parser.add_argument ("--matchSiteCutoff", help = "Stop searching after finding this number of potential mismatches (set to 0 for no limit)", type = int, default = 10000)
         parser.add_argument ("--forcePamList", help = "Force the use of a specific list of (potentially degenerate) PAM sites instead of determining it from the passed sequence")
         parser.add_argument ("--enumeratedContig", help = "For passing the enumerated contig number and encoding scheme")
         parser.add_argument ("--cacheSize", help = "Size of sites that can be cached before analysis in search or dumping to drive in index", type = int, default = 25000000)
+        parser.add_argument ("--noElevation", help = "Skip elevation analysis during a site search", action = "store_true")
         args = parser.parse_args()  #puts the arguments into the args object
        
         if args.arrayJob:  #quick trap for array job runners... it will be run during the checkargs phase and return to the main function where it will report itself done and quit
@@ -604,6 +605,7 @@ class Args(object):
         if cacheSize < 1000000:
             cacheSize = cacheSize * 1000000
         self.cacheSize = cacheSize
+        self.noElevation = args.noElevation
 
     def setIndexArgs(self, args):  #Validating arguments for launching an indexing supervisor.  This will also require good validations as users are likely to be launching this on their own.
         import os
@@ -1863,9 +1865,10 @@ class SearchSupervisor(object):
             import localAnnotation
             self.annotator = localAnnotation.LocalGeneCheck()
             self.annotateResults()
-            print("Calculating Elevation Scores")
-            self.applyElevationScores(args.sequence)
-            self.aggregateOffTargetScore = self.calculateAggregatedScore()
+            if not args.noElevation:
+                print("Calculating Elevation Scores")
+                self.applyElevationScores(args.sequence)
+                self.aggregateOffTargetScore = self.calculateAggregatedScore()
         print("Reporting")
         if args.outputToFile:
             self.outputToFile()
@@ -2127,9 +2130,10 @@ class SearchSupervisor(object):
         if self.tooManyMismatches:
             print("Too many mismatches (more than %s)" %(args.matchSiteCutoff))
         else:
-            print("Aggregate mismatch risk: %s" %(self.aggregateOffTargetScore))
+            if self.aggregateOffTargetScore or type(self.aggregateOffTargetScore) != bool:
+                print("Aggregate mismatch risk: %s" %(self.aggregateOffTargetScore))
             for i in range(0, len(self.matches)):
-                print("Mismatches: " + str(i))
+                print("Mismatches: " + str(i) + " (" + str(len(self.matches[i])) + ")")
                 for line in self.matches[i]:
                     print("\t" + str(line))
                     if args.quickExtend:
@@ -2143,7 +2147,9 @@ class SearchSupervisor(object):
         else:
             print(args.sequence, file = outputFile)
             for i in range(0, len(self.matches)):
-                print("\tMismatches: " + str(i), file = outputFile)
+                if self.aggregateOffTargetScore or type(self.aggregateOffTargetScore) != bool:
+                    print("Aggregate mismatch risk: %s" %(self.aggregateOffTargetScore), file = outputFile)
+                print("\tMismatches: " + str(i) + " (" + str(len(self.matches[i])) + ")", file = outputFile)
                 for line in self.matches[i]:
                     print("\t\t" + str(line), file = outputFile)
                     if args.quickExtend:
@@ -2186,7 +2192,7 @@ class SearchSupervisor(object):
         guideAnalysisDict["lastExon"] = args.lastExon
         return guideAnalysisDict
     
-    def createGuideAnalysisDict(self):
+    def createGuideAnalysisDict(self, reportedMismatchLimit = 5000):
         print("Formatting data for Azure table")
         import json
         import operator
@@ -2228,9 +2234,11 @@ class SearchSupervisor(object):
                     if i == 0 and j == skip:
                         continue
                     fullMismatchList.append(self.matches[i][j])
+            guideAnalysisDict["mismatchSiteCount"] = len(fullMismatchList)
+            guideAnalysisDict["truncatedSiteList"] = len(fullMismatchList) > reportedMismatchLimit
             if fullMismatchList:
                 fullMismatchList.sort(key = operator.attrgetter("elevationScore"), reverse = True)
-            for line in fullMismatchList:
+            for line in fullMismatchList[0:reportedMismatchLimit]:
                 if mismatchListCounter >= 100:
                     mismatchLists.append([])
                     mismatchListCounter = 0
