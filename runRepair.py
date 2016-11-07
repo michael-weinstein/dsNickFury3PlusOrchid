@@ -132,9 +132,9 @@ def main():
                         reruns.append(rerunTuple)
     for rerun in reruns:
         if len(rerun) == 2:
-            command = "python3 arrayWrapper.py -d " + rerun[0] + " -j " + str(rerun[1])
+            command = "/u/local/apps/python/3.4.3/bin/python3 arrayWrapper.py -d " + rerun[0] + " -j " + str(rerun[1])
         elif len(rerun) == 3:
-            command = "python3 arrayWrapper.py -d " + rerun[0] + " -j " + str(rerun[1]) + " -s " + str(rerun[2])
+            command = "/u/local/apps/python/3.4.3/bin/python3 arrayWrapper.py -d " + rerun[0] + " -j " + str(rerun[1]) + " -s " + str(rerun[2])
         if args.verbose:
             print(command)
         if args.repair:                

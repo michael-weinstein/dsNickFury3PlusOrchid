@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+global lockedTables
+lockedTables = ["hg38"]
+lockedTables = [tableName.upper() for tableName in lockedTables]
+
 def yesAnswer(question):  #asks the question passed in and returns True if the answer is yes, False if the answer is no, and keeps the user in a loop until one of those is given.  Also useful for walking students through basic logical python functions
     answer = False  #initializes the answer variable to false.  Not absolutely necessary, since it should be undefined at this point and test to false, but explicit is always better than implicit
     while not answer:  #enters the loop and stays in it until answer is equal to True
@@ -30,6 +34,8 @@ class CheckArgs():  #class that checks arguments and ultimately returns a valida
 def main():
     import time
     args = CheckArgs()
+    if args.table.upper() in lockedTables:
+        raise RuntimeError("%s has been locked in the table clearer.  Please remove this from the locked table list to proceed." %(args.table))
     if not yesAnswer("Are you sure you want to delete table \"%s\"" %(args.table)):
         quit("Goodbye.")
     print("Please confirm that you want to delete %s by typing its name" %(args.table))
@@ -59,4 +65,5 @@ def main():
             if attempts > 10:
                 raise RuntimeError("Unable to recreate table")
     print("Recreated table")
+    
 main()

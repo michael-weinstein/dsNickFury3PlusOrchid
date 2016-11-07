@@ -830,10 +830,10 @@ def main():
     targetSiteSet = getUniqueTargets(targetSiteSet, 0)
     for key in list(transcriptTargetData.keys()):
         transcriptTargetData[key] = getUniqueTargets(transcriptTargetData[key], 0)
-    jobList = JobList(targetSiteSet, ensg, "crispr", "hg38")
+    jobList = JobList(targetSiteSet, ensg, "crispr", "hg38v85")
     geneTranscriptData = GeneTranscriptData(transcriptTargetData, ensg)
     print("Submitting Azure Table")
-    geneTranscriptData.submitAzureTable("crispr", "hg38")
+    geneTranscriptData.submitAzureTable("crispr", "hg38v85")
     if targetSiteSet:
         jobList.submitJobs(30, mock = args.mock)
     else:

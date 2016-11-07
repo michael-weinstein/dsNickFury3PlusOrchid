@@ -65,7 +65,7 @@ def main():
     if args.subset:
         if args.blocks:
             start = args.blockSize * (args.blockNumber - 1)
-            end = args.blockSize * args.blockNumber
+            end = (args.blockSize * args.blockNumber) - 1
             ensgList = ensgList[start:end]
         elif args.firstGenes:
             ensgList = ensgList[:args.firstGenes]

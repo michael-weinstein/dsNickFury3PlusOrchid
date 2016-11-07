@@ -2143,7 +2143,8 @@ class SearchSupervisor(object):
         print("Writing results to file %s" %(args.outputToFile))
         outputFile = open(args.outputToFile, 'w')
         if self.tooManyMismatches:
-            print("Too many mismatches (more than %s)" %(args.matchSiteCutoff), file = outputFile)
+            print(args.sequence, file = outputFile)
+            print("\tToo many mismatches (more than %s)" %(args.matchSiteCutoff), file = outputFile)
         else:
             print(args.sequence, file = outputFile)
             for i in range(0, len(self.matches)):
