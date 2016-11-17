@@ -213,7 +213,7 @@ class Aggregation:
         stacker = "0.1,0.2,0.03"
         scores = "0.05,0.06,0.07"
         genicValues = "True,False,False"
-        expectedResult = [0.474109653093]
+        expectedResult = [0.72225885]
         toleranceRange = 0.001
         testResult = self.predict(stacker, scores, genicValues)
         #print(testResult)
@@ -221,7 +221,7 @@ class Aggregation:
         genicValues = genicValues.split(",")  #splitting this here for error reporting
         for i in range(0, len(testResult)):
             if testResult[i] > expectedResult[i] + toleranceRange or testResult[i] < expectedResult[i] - toleranceRange:
-                raise PredictionError("Aggregation model test failed.  Please check installation and model.  Failed on sequence number %s %s %s, testResult: %s, expected: %s" %(i, scores[i], genicValues[i], testResult[i], expectedResult[i]))
+                raise PredictionError("Elevation model test failed.  Please check installation and model.  Failed on sequence number %s %s %s, testResult: %s, expected: %s" %(i, scores[i], genicValues[i], testResult[i], expectedResult[i]))
         return True
 
 
