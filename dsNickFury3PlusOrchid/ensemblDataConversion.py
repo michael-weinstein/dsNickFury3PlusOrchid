@@ -61,7 +61,7 @@ class RefSeqToENST(EnsemblConversion):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='homo_sapiens_core_85_38',
+                                    db='homo_sapiens_core_88_38',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
@@ -124,7 +124,7 @@ class ENSGToENST(EnsemblConversion):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='homo_sapiens_core_85_38',
+                                    db='homo_sapiens_core_88_38',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
@@ -156,16 +156,16 @@ class SymbolToENSG(EnsemblConversion):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='ensembl_website_85',
+                                    db='ensembl_website_88',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
         query = "SELECT\
-                    display_label, gene_autocomplete.stable_id, homo_sapiens_core_85_38.gene.biotype\
+                    display_label, gene_autocomplete.stable_id, homo_sapiens_core_88_38.gene.biotype\
                  FROM\
-                    gene_autocomplete, homo_sapiens_core_85_38.gene\
+                    gene_autocomplete, homo_sapiens_core_88_38.gene\
                  WHERE\
-                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_85_38.gene.stable_id"        
+                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_88_38.gene.stable_id"        
         ensemblConnection.execute(query)
         rawConversionTable = ensemblConnection.fetchall()
         conversionTable = {}
@@ -175,19 +175,19 @@ class SymbolToENSG(EnsemblConversion):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='homo_sapiens_core_85_38',
+                                    db='homo_sapiens_core_88_38',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
         query = "SELECT\
-                    synonym, ensembl_website_85.gene_autocomplete.stable_id, biotype\
+                    synonym, ensembl_website_88.gene_autocomplete.stable_id, biotype\
                 FROM\
-                    external_synonym, xref, ensembl_website_85.gene_autocomplete, gene\
+                    external_synonym, xref, ensembl_website_88.gene_autocomplete, gene\
                 WHERE\
                         external_synonym.xref_id = xref.xref_id\
-                    AND	xref.display_label = ensembl_website_85.gene_autocomplete.display_label\
-                    AND ensembl_website_85.gene_autocomplete.species = 'homo_sapiens'\
-                    AND ensembl_website_85.gene_autocomplete.stable_id = gene.stable_id"        
+                    AND	xref.display_label = ensembl_website_88.gene_autocomplete.display_label\
+                    AND ensembl_website_88.gene_autocomplete.species = 'homo_sapiens'\
+                    AND ensembl_website_88.gene_autocomplete.stable_id = gene.stable_id"        
         ensemblConnection.execute(query)
         rawConversionTable = ensemblConnection.fetchall()
         for item in rawConversionTable:
@@ -286,16 +286,16 @@ class GenesFromChromosomeInterval(EnsemblConversion):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='ensembl_website_85',
+                                    db='ensembl_website_88',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
         query = "SELECT\
-                    display_label, gene_autocomplete.stable_id, location, homo_sapiens_core_85_38.gene.biotype\
+                    display_label, gene_autocomplete.stable_id, location, homo_sapiens_core_88_38.gene.biotype\
                  FROM\
-                    gene_autocomplete, homo_sapiens_core_85_38.gene\
+                    gene_autocomplete, homo_sapiens_core_88_38.gene\
                  WHERE\
-                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_85_38.gene.stable_id"        
+                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_88_38.gene.stable_id"        
         ensemblConnection.execute(query)
         rawConversionTable = ensemblConnection.fetchall()
         conversionTable = {}

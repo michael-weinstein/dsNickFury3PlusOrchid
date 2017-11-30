@@ -11,7 +11,7 @@ class CheckArgs():  #class that checks arguments and ultimately returns a valida
         parser = argparse.ArgumentParser()
         parser.add_argument("-r", "--altStartRange", help = "Percent of protein to exclude for an alternative start site", default = 25, type = int)
         parser.add_argument("-p", "--cutPoint", help = "The point where the system cuts, relative to the end of the PAM", default = -6, type = int)
-        parser.add_argument("-d", "--cutPadding", help = "Number of bases on either side of the cut that need to be in a coding region.", default = 6, type = int)
+        parser.add_argument("-d", "--cutPadding", help = "Number of bases on either side of the cut that need to be in a coding region.", default = 0, type = int)
         parser.add_argument("-s", "--geneSymbol", help = "Enter a gene symbol to analyze")
         parser.add_argument("-g", "--ensg", help = "Enter an ensembl gene ID to analyze")
         parser.add_argument("-m", "--mock", help = "Run a mock submission without sending to queue or writing files.", action = 'store_true')
@@ -82,28 +82,37 @@ class SequenceWindow(object):
 class TranscriptAnalysis(object):
     
     def __init__(self, enst):
+        self.failedSoftMaskSeq = False
         self.windowSize = 3
         self.enst = enst
         self.exons, self.introns = self.getExonsAndIntrons()
-        self.chromosome, self.startPosition, self.strand = self.getStartAndStrand()
-        if self.strand == "+":
-            self.exonIntervals = self.senseExonIntervals()
-        if self.strand == "-":
-            self.exonIntervals = self.antisenseExonIntervals()
-        self.proteinLength = self.getProteinLength()
-        if self.proteinLength:
-            self.startExon, self.startExonBase = self.findStartSite()
-            self.lastAltStartExon, self.lastAltStartExonBase = self.checkAltStartSites()
-            self.stopExon, self.stopPosition = self.findStopSite()
-            self.maskedSequence = self.sequenceForAnalysis()
+        if not self.failedSoftMaskSeq:
+            self.chromosome, self.startPosition, self.strand = self.getStartAndStrand()
+            if self.strand == "+":
+                self.exonIntervals = self.senseExonIntervals()
+            if self.strand == "-":
+                self.exonIntervals = self.antisenseExonIntervals()
+            self.proteinLength = self.getProteinLength()
+            if self.proteinLength:
+                self.startExon, self.startExonBase = self.findStartSite()
+                self.lastAltStartExon, self.lastAltStartExonBase = self.checkAltStartSites()
+                self.stopExon, self.stopPosition = self.findStopSite()
+                self.maskedSequence = self.sequenceForAnalysis()
         
     def getExonsAndIntrons(self):
         import urllib.request
-        urlStart  = "http://rest.ensembl.org/sequence/id/"
+        urlStart  = "http://mar2017.rest.ensembl.org/sequence/id/"
         urlEnd = "?content-type=text/plain;mask_feature=1"
         fullUrl = urlStart + self.enst + urlEnd
-        ensembl = urllib.request.urlopen(fullUrl)
+        try:
+            ensembl = urllib.request.urlopen(fullUrl)
+        except urllib.error.HTTPError:
+            self.failedSoftMaskSeq = True
+            return (False, False)
         rawSeq = ensembl.read().decode('utf-8')
+        if "error" in rawSeq:  #this happens with incomplete cDNA sequences
+            self.failedSoftMaskSeq = True
+            return (False, False)
         rawSeq = self.reviseSoftMaskForTranslationStart(rawSeq)
         exons, introns = self.splitExonsAndIntrons(rawSeq)
         #print(rawSeq)
@@ -149,7 +158,7 @@ class TranscriptAnalysis(object):
     def getStartAndStrand(self):
         import urllib.request
         import json
-        urlStart  = "http://rest.ensembl.org/map/cdna/"
+        urlStart  = "http://mar2017.rest.ensembl.org/map/cdna/"
         urlEnd = "/1..1?content-type=application/json"
         fullUrl = urlStart + self.enst + urlEnd
         try:
@@ -209,6 +218,8 @@ class TranscriptAnalysis(object):
         stopCodons = ["TAA", "TAG", "TGA"]
         for exon in self.exons:
             self.mRNAseq += exon
+        if len(self.mRNAseq) <= 3:
+            return 0
         window = SequenceWindow(self.mRNAseq, 3)
         while window.windowSeq and window.windowSeq not in startCodons:
             window.advance()
@@ -423,6 +434,10 @@ class TargetFinder(object):  #This object is analogous to a FASTA indexer, excep
         self.position = 0
         self.cutPoint = args.cutPoint
         self.cutPadding = args.cutPadding
+        self.noCutPadding = False
+        if not self.cutPadding:
+            self.cutPadding = 1
+            self.noCutPadding = True
         self.matches = self.findMatches()
         
     def findMatches(self):  #main running function for this object, actually runs the search, gets azimuth scores if needed, and returns the list of matches
@@ -436,7 +451,15 @@ class TargetFinder(object):  #This object is analogous to a FASTA indexer, excep
                     cutSeq = self.target[baseAfterCut - self.cutPadding : baseAfterCut + self.cutPadding]
                 except IndexError:
                     cutSeq = False
-                if cutSeq and cutSeq.isupper():
+                validCutSite = False
+                if not self.noCutPadding and cutSeq and cutSeq.isupper():
+                    validCutSite = True
+                if self.noCutPadding:
+                    if cutSeq:
+                        for letter in cutSeq:
+                            if letter.isupper():
+                                validCutSite = True
+                if validCutSite:
                     guide = windowSeq[:-self.pamLength]
                     pam = windowSeq[-self.pamLength:]
                     longSeq = self.getLongSeq(guide, pam,'+')  #tries to get an extended sequence for azimuth analysis
@@ -448,7 +471,15 @@ class TargetFinder(object):  #This object is analogous to a FASTA indexer, excep
                     cutSeq = self.target[baseAfterCut - self.cutPadding : baseAfterCut + self.cutPadding]
                 except IndexError:
                     cutSeq = False
-                if cutSeq and cutSeq.isupper():
+                validCutSite = False
+                if not self.noCutPadding and cutSeq and cutSeq.isupper():
+                    validCutSite = True
+                if self.noCutPadding:
+                    if cutSeq:
+                        for letter in cutSeq:
+                            if letter.isupper():
+                                validCutSite = True
+                if validCutSite:
                     guide = revComp[:-self.pamLength]
                     pam = revComp[-self.pamLength:]
                     longSeq = self.getLongSeq(guide, pam,'-')
@@ -557,7 +588,7 @@ class JobList(object):
         #    targetGroupMember += 1
             azureTableInfo = [re.sub('\W',"_",item) for item in azureTableInfo]  #make sure no weird characters like commas and dashes make it in here
             azureTableString = ",".join(azureTableInfo)
-            bashLine = pythonInterpreterAbsolutePath + "dsNickFury3.2.py -m search -g hg38 -s " + self.targets[i][0].upper() + " -p NGG --azimuthSequence " + self.targets[i][1] + " --endClip 3 --azureTableOut " + azureTableString # + flags
+            bashLine = pythonInterpreterAbsolutePath + "dsNickFury3.3.py -m search -g hg38 -s " + self.targets[i][0].upper() + " -p NGG --azimuthSequence " + self.targets[i][1] + " --endClip 3 --azureTableOut " + azureTableString # + flags
             self.bashLines.append(bashLine)
         for line in self.bashLines:
             print(line)
@@ -811,14 +842,17 @@ def main():
     enstList = transcriptIDConversion.convert(ensg, biotypeFilter = "protein_coding")
     targetCollection = []
     for enst in enstList:
-        print("Processing %s" %(enst[0]))
+        print("Processing %s" %(enst[0]), end = "...", flush = True)
         if not enst[0] in translationStartDict:
             print("Transcript %s does not have a canonical start site listed." %(enst[0]))
             continue
         exonData = TranscriptAnalysis(enst[0])
-        if exonData.proteinLength:  #if this comes back false, we are probably looking at a bad transcript.
+        if not exonData.failedSoftMaskSeq and exonData.proteinLength:  #If failedSoftMask is true or we can't get a protein length, we are looking at a bad transcript.
             targetFinder = TargetFinder(exonData, 20, "NGG")
             targetCollection += targetFinder.matches
+            print("DONE")
+        else:
+            print("Unable to process, likely bad transcript.")
     targetSiteSet = set()
     transcriptTargetData = {}
     for target in targetCollection:
@@ -830,10 +864,10 @@ def main():
     targetSiteSet = getUniqueTargets(targetSiteSet, 0)
     for key in list(transcriptTargetData.keys()):
         transcriptTargetData[key] = getUniqueTargets(transcriptTargetData[key], 0)
-    jobList = JobList(targetSiteSet, ensg, "crispr", "hg38v85")
+    jobList = JobList(targetSiteSet, ensg, "crispr", "hg38")
     geneTranscriptData = GeneTranscriptData(transcriptTargetData, ensg)
     print("Submitting Azure Table")
-    geneTranscriptData.submitAzureTable("crispr", "hg38v85")
+    geneTranscriptData.submitAzureTable("crispr", "hg38")
     if targetSiteSet:
         jobList.submitJobs(30, mock = args.mock)
     else:

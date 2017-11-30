@@ -9,7 +9,7 @@ class LocalGeneCheck(object):
         self.biotypeSpace = self.getBiotypeSpace()
 
     def renewTable(self):
-        self.conversionTable = loadTable(True)
+        self.conversionTable = self.loadTable(True)
     
     def getBiotypeSpace(self):
         biotypes = set()
@@ -111,16 +111,16 @@ class LocalGeneCheck(object):
         ensemblDb = pymysql.connect(host='ensembldb.ensembl.org',
                                     user='anonymous',
                                     password='',
-                                    db='ensembl_website_84',
+                                    db='ensembl_website_88',
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         ensemblConnection = ensemblDb.cursor()
         query = "SELECT\
-                    display_label, location, homo_sapiens_core_84_38.gene.biotype\
+                    display_label, location, homo_sapiens_core_88_38.gene.biotype\
                  FROM\
-                    gene_autocomplete, homo_sapiens_core_84_38.gene\
+                    gene_autocomplete, homo_sapiens_core_88_38.gene\
                  WHERE\
-                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_84_38.gene.stable_id"        
+                    species = 'homo_sapiens' and gene_autocomplete.stable_id = homo_sapiens_core_88_38.gene.stable_id"        
         ensemblConnection.execute(query)
         rawConversionTable = ensemblConnection.fetchall()
         conversionTable = {}

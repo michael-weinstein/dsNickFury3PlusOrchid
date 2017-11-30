@@ -1018,8 +1018,7 @@ class TargetFinder(object):  #This object is analogous to a FASTA indexer, excep
                 "GlobalParameters": {}
         }
         body = str.encode(json.dumps(data))
-        #url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/c24d128abfaf4832abf1e7ef45db4b54/execute?api-version=2.0&details=true'
-        url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/5c6cbabaef4947b4b7425e934b6f7d6b/execute?api-version=2.0&details=true'  #slower, but only one working for now.  Use for testing
+        url = settings.azure_url
         api_key = self.azimuthAPIkey
         headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
         req = urllib.request.Request(url, body, headers)
@@ -1525,8 +1524,7 @@ class AzimuthAnalysis(object):
                     "GlobalParameters": {}
             }
             body = str.encode(json.dumps(data))
-            #url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/c24d128abfaf4832abf1e7ef45db4b54/execute?api-version=2.0&details=true'
-            url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/5c6cbabaef4947b4b7425e934b6f7d6b/execute?api-version=2.0&details=true'  #slower, but only one working for now.  Use for testing
+            url = settings.azure_url
             api_key = self.azimuthAPIkey
             headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
             req = urllib.request.Request(url, body, headers)

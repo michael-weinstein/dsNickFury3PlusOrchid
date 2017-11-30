@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
+import settings
 
-global python2AbsolutePath; global python2LibPath
-python2AbsolutePath = "/u/local/apps/python/2.7.2/bin/python"
-python2LibPath = "/u/local/apps/python/2.7.2/lib"
+python2AbsolutePath = settings.python2_bin
+python2LibPath = settings.python2_lib
 
 def run(model, *data):  #model should be the name of the predictive model, case insensitive.  Data should be a list or a pair of lists.  Probably should also include handling for strings when a single sequence is passed.
     import sys
@@ -30,36 +29,43 @@ def run(model, *data):  #model should be the name of the predictive model, case 
     for i in range(0,len(data)):
         data[i] = [str(element) for element in data[i]]  #make sure every element of the list is now a string
         data[i] = ",".join(data[i])  #and join them together with commas
-    oldLD = os.environ['LD_LIBRARY_PATH']
-    tempLD = oldLD.split(":")
-    tempLD.append(python2LibPath)
-    os.environ['LD_LIBRARY_PATH'] = ":".join(tempLD)
+
+    # oldLD = os.environ['LD_LIBRARY_PATH']
+    # tempLD = oldLD.split(":")
+    # tempLD.append(python2LibPath)
+    # os.environ['LD_LIBRARY_PATH'] = ":".join(tempLD)
+
     commandList = [python2AbsolutePath, "predictionWrapper.py", model]
     dataString = " ".join(data)
+    # print("CALLING:", commandList)
+    # print("ARGS:", dataString)
     predictionWrapper = subprocess.Popen(commandList, stderr=subprocess.PIPE, stdin=subprocess.PIPE) #, shell = True) # stdout = subprocess.PIPE)
     predictionOutput = predictionWrapper.communicate(dataString.encode())[1].decode()
+    print(predictionOutput)
+
+    # import ipdb; ipdb.set_trace()
     #print(predictionOutput)
     try:
         start = predictionOutput.index("<BEGIN_RESULTS>") + 15
         end = predictionOutput.index("<END_RESULTS>")
     except ValueError:
-        os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
+        # os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
         raise PredictionError("Unable to find data outputs from predictionWrapper.  Output: " %(predictionOutput))
     #print(start)
     #print(end)
     #print(predictionOutput[start:end])
     if start == end:
-        os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
+        # os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
         return None
     result = predictionOutput[start:end]
     # result = result.split(",")
     try:
         result = json.loads(result)
     except ValueError:
-        os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
+        # os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
         raise ValueError("Error converting returned prediction values to floats.  Unable to convert '%s'." %(result))
     #print(result)
-    os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
+    # os.environ['LD_LIBRARY_PATH'] = ":".join(oldLD)
     return result
 
 class PredictionError(Exception):
