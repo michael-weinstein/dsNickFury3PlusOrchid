@@ -1,3 +1,9 @@
+import sys
+import settings
+
+sys.path.append(settings.azimuth_path)
+sys.path.append(settings.elevation_path)
+
 class Azimuth:
     
     def __init__(self, skipTest = False):  #may take a list of on target sequences or a single one.  Multiples should be comma separated
@@ -50,13 +56,13 @@ class Elevation:
     def __init__(self, skipTest = False):
         import sys
         import os
-        elevationPath = os.getcwd() + os.sep + "elevation"
-        sys.path.append(elevationPath)
-        elevationPath += os.sep + "elevation"
-        sys.path.append(elevationPath)
-        elevationPath += os.sep + "cmds"
-        sys.path.append(elevationPath)
-        import predict as elevation
+        # elevationPath = os.getcwd() + os.sep + "elevation"
+        # sys.path.append(elevationPath)
+        # elevationPath += os.sep + "elevation"
+        # sys.path.append(elevationPath)
+        # elevationPath += os.sep + "cmds"
+        # sys.path.append(elevationPath)
+        from elevation.cmds import predict as elevation
         self.model = elevation.Predict()
         #touchFile = open("progressCounter/modelLoaded.progress", 'w')
         #touchFile.close()
@@ -131,10 +137,10 @@ class Elevation:
     def testModel(self):
         onTarget = "ATGCATGCATGCATGCATGCAGG"
         offTargets = "ATGCATGCATGCTTGCATGCAGG,ATGCATCAATGCATGCATGCAGG,ATGCATGCATGCATGCGTGCAGG,ATGCATGCATGAATGCATGCAGG,ATGCATGCATGCATTCATGCAGG,ATGCCTGCATGCATGCATGCAGG,ATGCATAAATGCATGCATGCAGG,ATGCATGCATGCATGCATTTAGG,ATGCATGCACATATGCATGCAGG"
-        expectedResult = [(0.29999999999999999, 0.35629573065038556), (0.44687500000000002, 0.058179509859210256), (0.176470588235, 0.24613468821874313), (0.71428571428599996, 0.5077846707094904), (0.14285714285699999, 0.22173111174356214), (0.5, 0.34317325393211062), (0.65000000000000002, 0.13330255841852942), (0.20000000000010001, 0.025756948041335392), (0.28717948717955383, 0.0093815891213724391)]
+        expectedResult = [(0.29999999999999999, 0.43530669745184652), (0.44687500000000002, 0.0093085780766980278), (0.176470588235, 0.1516546991054954), (0.71428571428599996, 0.31189883994468848), (0.14285714285699999, 0.15566236339780729), (0.5, 0.1841277506440084), (0.65000000000000002, 0.027319749502257518), (0.20000000000010001, 0.0078475576931528422), (0.28717948717955383, 0.00015869402832649812)]
         toleranceRange = 0.001
         testResult = self.predict(onTarget, offTargets)
-        #print(testResult)
+        # print(testResult)
         testData = offTargets.split(",")  #splitting this here for error reporting
         for i in range(0, len(testResult)):
             for j in range(0, len(testResult[i])):
@@ -149,12 +155,12 @@ class Aggregation:
     def __init__(self, skipTest = False):
         import os
         import sys
-        aggregationPath = os.getcwd() + os.sep + "aggregation"
-        sys.path.append(aggregationPath)
-        import aggregation
+        # aggregationPath = os.getcwd() + os.sep + "aggregation"
+        # sys.path.append(aggregationPath)
+        from elevation import aggregation
         import numpy
         import cPickle
-        aggregationModelFileName = aggregationPath + os.sep + "aggregation_model.pkl"
+        aggregationModelFileName = settings.aggregation_model_filename
         aggregationModelFile = open(aggregationModelFileName, 'rb')
         try:
             self.model, theOtherThing = cPickle.load(aggregationModelFile)
@@ -181,7 +187,7 @@ class Aggregation:
                 raise PredictionError("Error in genic value list. Value %s was neither true nor false." %(score))
             
     def predict(self, stackerScores, elevationScores, genicValues):
-        import aggregation
+        from elevation import aggregation
         import numpy
         stackerScoreList = stackerScores.split(",")
         stackerScoreList = [element.strip() for element in stackerScoreList]
@@ -213,7 +219,7 @@ class Aggregation:
         stacker = "0.1,0.2,0.03"
         scores = "0.05,0.06,0.07"
         genicValues = "True,False,False"
-        expectedResult = [0.72225885]
+        expectedResult = [0.3912521915455795]
         toleranceRange = 0.001
         testResult = self.predict(stacker, scores, genicValues)
         #print(testResult)

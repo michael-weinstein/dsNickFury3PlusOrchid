@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 Software License
 Commercial reservation
@@ -26,10 +25,12 @@ You agree:
 11.	You will not use any name, trade name, trademark, name of any campus, or other designation of the Regents of the University of California in advertising, publicity, or other promotional activity, except as permitted herein.
 '''
 
+import settings
+
 #This is the path for the python interpreter.  You must set it before this will run.  If you are unsure what this is, try the command "which python3" or "which pypy3" and try pasting the path returned between the quotes on the next line.
 global pythonInterpreterAbsolutePath; global pythonCompilerAbsolutePath
 #pythonInterpreterAbsolutePath = "/Library/Frameworks/Python.framework/Versions/3.4/bin/python3"
-pythonInterpreterAbsolutePath = "/u/local/apps/python/3.4.3/bin/python3"  #Set the absolute path for your python interpreter here between the quotes.  Depending on your system configuration, you may also be able to use a shortcut, such as python3, but that has a greater chance of errors
+pythonInterpreterAbsolutePath = settings.python3_bin  #Set the absolute path for your python interpreter here between the quotes.  Depending on your system configuration, you may also be able to use a shortcut, such as python3, but that has a greater chance of errors
 pythonCompilerAbsolutePath = ""
     
 #USEFUL DEFAULT SETTINGS HERE
@@ -45,10 +46,10 @@ global positionByteLength
 positionByteLength = 4  #setting this to a regular, unsigned integer for now (4 bytes).  Hopefully I don't find anything with a larger genome or I have to use Q
 
 global currentVersion
-currentVersion = "3.1"
+currentVersion = "3.2"
 
 global versionName
-versionName = "Maximum effort.  Minimum memory and sanity."
+versionName = "The Orchid edition. Perfecting the replacement base fragment. I totally asked for this."
 
 global yearWritten
 yearWritten = "2016"
@@ -141,7 +142,8 @@ def checkPythonInterpreterAbsolutePath(absPath):
     if not os.path.isfile(absPath):  #if the absolute path is not actually a file, check if we have an alias we can expand upon
         import subprocess
         try:
-            absPath = subprocess.check_output(['which',absPath]).decode('utf-8').strip()
+            pass
+            # absPath = subprocess.check_output(['which',absPath]).decode('utf-8').strip()
         except subprocess.CalledProcessError:
             raise RuntimeError("ABORTED: Python interpreter not found at " + absPath + " and it does not appear to be a valid alias.  Please correct the location.")
     return absPath
@@ -211,10 +213,11 @@ class Args(object):
         parser.add_argument ("--lastExon", help = "Flag this site as being in the last exon of a gene", action = "store_true")
         parser.add_argument ("--azureTableOut", help = "Output results to an azure table.  Argument should be formatted as account,tableName,partitionKey,rowKey")
         parser.add_argument ("--endClip", help = "Ignore the last n bases (distal to PAM) when matching", type = int, default = 0)
-        parser.add_argument ("--matchSiteCutoff", help = "Stop searching after finding this number of potential mismatches (set to 0 for no limit)", type = int, default = 5000)
+        parser.add_argument ("--matchSiteCutoff", help = "Stop searching after finding this number of potential mismatches (set to 0 for no limit)", type = int, default = 10000)
         parser.add_argument ("--forcePamList", help = "Force the use of a specific list of (potentially degenerate) PAM sites instead of determining it from the passed sequence")
         parser.add_argument ("--enumeratedContig", help = "For passing the enumerated contig number and encoding scheme")
         parser.add_argument ("--cacheSize", help = "Size of sites that can be cached before analysis in search or dumping to drive in index", type = int, default = 25000000)
+        parser.add_argument ("--noElevation", help = "Skip elevation analysis during a site search", action = "store_true")
         args = parser.parse_args()  #puts the arguments into the args object
        
         if args.arrayJob:  #quick trap for array job runners... it will be run during the checkargs phase and return to the main function where it will report itself done and quit
@@ -604,6 +607,7 @@ class Args(object):
         if cacheSize < 1000000:
             cacheSize = cacheSize * 1000000
         self.cacheSize = cacheSize
+        self.noElevation = args.noElevation
 
     def setIndexArgs(self, args):  #Validating arguments for launching an indexing supervisor.  This will also require good validations as users are likely to be launching this on their own.
         import os
@@ -1018,8 +1022,7 @@ class TargetFinder(object):  #This object is analogous to a FASTA indexer, excep
                 "GlobalParameters": {}
         }
         body = str.encode(json.dumps(data))
-        #url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/c24d128abfaf4832abf1e7ef45db4b54/execute?api-version=2.0&details=true'
-        url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/5c6cbabaef4947b4b7425e934b6f7d6b/execute?api-version=2.0&details=true'  #slower, but only one working for now.  Use for testing
+        url = settings.azure_url
         api_key = self.azimuthAPIkey
         headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
         req = urllib.request.Request(url, body, headers)
@@ -1510,7 +1513,10 @@ class AzimuthAnalysis(object):
         try:
             import predictionCaller
             sequence = sequence.replace("_","")
-            return predictionCaller.run("azimuth", sequence)
+            score = predictionCaller.run("azimuth", sequence)
+            if len(score) == 1:
+                score = score[0]
+            self.score = score
         except ImportError:
             print("Trying remote Azimuth analysis")
             import urllib.request
@@ -1531,8 +1537,7 @@ class AzimuthAnalysis(object):
                         "GlobalParameters": {}
                 }
                 body = str.encode(json.dumps(data))
-                #url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/c24d128abfaf4832abf1e7ef45db4b54/execute?api-version=2.0&details=true'
-                url = 'https://ussouthcentral.services.azureml.net/workspaces/ee5485c1d9814b8d8c647a89db12d4df/services/5c6cbabaef4947b4b7425e934b6f7d6b/execute?api-version=2.0&details=true'  #slower, but only one working for now.  Use for testing
+                url = settings.azure_url
                 api_key = self.azimuthAPIkey
                 headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
                 req = urllib.request.Request(url, body, headers)
@@ -1762,7 +1767,7 @@ class MatchSite(object):  #Note that this is also used when we unpickle this obj
         self.tooManyOtherSites = False
         self.perfectMatch = False
         self.elevationScore = False
-
+        self.stackerScore = False
         
     def calculateMismatchRisk(self):  #
         if self.mismatchRisk:
@@ -1835,6 +1840,7 @@ class SearchSupervisor(object):
         args.inputDirectory = args.genomeListDirectory + os.sep + genomeDirectory
         self.genomeDirectory = args.genomeListDirectory + genomeDirectory
         self.tooManyMismatches = False
+        self.aggregateOffTargetScore = False
         #self.createTempDir()
         print("Creating job list")
         self.runSearchJob() #changed for single core
@@ -1859,8 +1865,10 @@ class SearchSupervisor(object):
             import localAnnotation
             self.annotator = localAnnotation.LocalGeneCheck()
             self.annotateResults()
-            print("Calculating Elevation Scores")
-            self.applyElevationScores(args.sequence)
+            if not args.noElevation:
+                print("Calculating Elevation Scores")
+                self.applyElevationScores(args.sequence)
+                self.aggregateOffTargetScore = self.calculateAggregatedScore()
         print("Reporting")
         if args.outputToFile:
             self.outputToFile()
@@ -1936,7 +1944,7 @@ class SearchSupervisor(object):
             raise RuntimeError("No tree file found where there should be one at %s" %(treeFileName))
         treeHandler = TreeNavigator(treeFileName, guide)
         matchBytes = {}
-        for i in range(0,args.mismatchTolerance + 1 + args.canonicalPAMMismatchRangeExtension):   #adding 2 because we go out to the range of mismatchTolerance and one more for sites with that many mismatches plus a non-canonical pam
+        for i in range(0,args.mismatchTolerance + 1 + args.endClip + args.canonicalPAMMismatchRangeExtension):   #adding 2 because we go out to the range of mismatchTolerance and one more for sites with that many mismatches plus a non-canonical pam
             matchBytes[i] = bytes()
         siteBuffer = bytes()
         nextTargetFileInfo = treeHandler.getNextLevel2()
@@ -2070,66 +2078,111 @@ class SearchSupervisor(object):
             if offTargetSequences:
                 elevationScoreList = calculateElevationScoreLocal(intendedTarget.replace("_",""), offTargetSequences)
                 for j in range(0, len(elevationScoreList)):
-                    self.matches[key][j].elevationScore = elevationScoreList[j]
-                    self.matches[key][j].score = elevationScoreList[j]
+                    self.matches[key][j].elevationScore = elevationScoreList[j][0]
+                    self.matches[key][j].stackerScore = elevationScoreList[j][1]
+                    self.matches[key][j].score = elevationScoreList[j][0]
                     
     def applyElevationScores(self, intendedTarget):
         offTargetSequences = []
-        for i in range(1, args.mismatchTolerance + 1):
+        for i in range(0, len(self.matches)):
             for line in self.matches[i]:
                 offTargetSequences.append(line.matchSeq.replace("_",""))
         if offTargetSequences:
             elevationScoreList = calculateElevationScoreLocal(intendedTarget.replace("_",""), offTargetSequences)
-            for i in range(1, args.mismatchTolerance + 1):
+            for i in range(0, len(self.matches)):
                 for j in range(0, len(self.matches[i])):
                     siteScore = elevationScoreList.pop(0)
-                    self.matches[i][j].elevationScore = siteScore
-                    self.matches[i][j].score = siteScore
+                    self.matches[i][j].elevationScore = siteScore[0]
+                    self.matches[i][j].stackerScore = siteScore[1]
+                    self.matches[i][j].score = siteScore[0]
             if elevationScoreList:
                 print("Elevation score list should have been depleted, but was not.  There were %s sites left." % (len(elevationScoreList)))
                 raise RuntimeError("Elevation score list had items remaining: " + len(elevationScoreList))
-            
+    
+    def calculateAggregatedScore(self):
+        import predictionCaller
+        elevationScoreList = []
+        stackerScoreList = []
+        genicScoreList = []
+        for i in range(0, len(self.matches)):
+            skip = -1  #value we won't hit while iterating, but still need to check.  Mostly here for handling multiple perfect match situations
+            if i == 0:
+                if len(self.matches[i]) <= 1:
+                    continue
+                else:  #multiple perfect match situation
+                    skip = 0
+                    for j in range(0, len(self.matches[i])):
+                        if self.matches[i][j].gene:
+                            skip = j
+            for j in range(0, len(self.matches[i])):
+                if j == skip:  #trap for when we need to skip a value
+                    continue
+                elevationScoreList.append(self.matches[i][j].elevationScore)
+                stackerScoreList.append(self.matches[i][j].stackerScore)
+                if self.matches[i][j].gene:
+                    genicScoreList.append(True)
+                else:
+                    genicScoreList.append(False)
+        result = predictionCaller.run("aggregation", stackerScoreList, elevationScoreList, genicScoreList)
+        return result[0]
+        
     def reportResults(self):
         if self.tooManyMismatches:
             print("Too many mismatches (more than %s)" %(args.matchSiteCutoff))
         else:
-            for i in range(0,args.mismatchTolerance + 1 + args.canonicalPAMMismatchRangeExtension):
-                print("Mismatches: " + str(i))
+            if self.aggregateOffTargetScore or type(self.aggregateOffTargetScore) != bool:
+                print("Aggregate mismatch risk: %s" %(self.aggregateOffTargetScore))
+            for i in range(0, len(self.matches)):
+                print("Mismatches: " + str(i) + " (" + str(len(self.matches[i])) + ")")
                 for line in self.matches[i]:
                     print("\t" + str(line))
                     if args.quickExtend:
                         print("\tExtended site: " + line.extendedMatchSeq)
                         
     def outputToFile(self):
+        import os, errno
+        path = os.path.dirname(args.outputToFile)
+        try:
+            os.makedirs(path)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise
+
         print("Writing results to file %s" %(args.outputToFile))
         outputFile = open(args.outputToFile, 'w')
         if self.tooManyMismatches:
-            print("Too many mismatches (more than %s)" %(args.matchSiteCutoff), file = outputFile)
+            print(args.sequence, file = outputFile)
+            print("\tToo many mismatches (more than %s)" %(args.matchSiteCutoff), file = outputFile)
         else:
             print(args.sequence, file = outputFile)
-            for i in range(0,args.mismatchTolerance + 1 + args.canonicalPAMMismatchRangeExtension):
-                print("\tMismatches: " + str(i), file = outputFile)
+            for i in range(0, len(self.matches)):
+                if self.aggregateOffTargetScore or type(self.aggregateOffTargetScore) != bool:
+                    print("Aggregate mismatch risk: %s" %(self.aggregateOffTargetScore), file = outputFile)
+                print("\tMismatches: " + str(i) + " (" + str(len(self.matches[i])) + ")", file = outputFile)
                 for line in self.matches[i]:
                     print("\t\t" + str(line), file = outputFile)
                     if args.quickExtend:
                         print("\t\tExtended site: " + line.extendedMatchSeq, file = outputFile)
         outputFile.close()
                     
-    def createGuideAnalysisDict(self):
+    def createGuideAnalysisDictOld(self):
         print("Formatting data for Azure table")
         import json
         import operator
         guideAnalysisDict = {}
         guideAnalysisDict["target"] = args.sequence.replace("_","")
         guideAnalysisDict["azimuth"] = self.azimuthScore
+        guideAnalysisDict["aggregatedOffTarget"] = self.aggregateOffTargetScore
         mismatchLists = [[]]
         mismatchListNumber = 0
         mismatchListCounter = 0
         #print(self.tooManyMismatches)
         if not self.tooManyMismatches:
-            for i in range(1, args.mismatchTolerance):
+            for i in range(1, len(self.matches)):
                 self.matches[i].sort(key = operator.attrgetter("elevationScore"), reverse = True)        
-            for i in range(1, args.mismatchTolerance + 1):   #starting off at 1, since anything in index 0 is a perfect match
+            for i in range(1, len(self.matches)):   #starting off at 1, since anything in index 0 is a perfect match
                 for line in self.matches[i]:
                     if mismatchListCounter >= 100:
                         mismatchLists.append([])
@@ -2142,7 +2195,76 @@ class SearchSupervisor(object):
             guideAnalysisDict["mismatchListCount"] = len(mismatchLists)
             #mismatchList.sort(key = operator.itemgetter(3), reverse = True)
             #guideAnalysisDict["offTargets"] = zlib.compress(json.dumps(mismatchList).encode(),9)
-            guideAnalysisDict["geneElevation"], guideAnalysisDict["nongeneElevation"] = self.calculateGeneAndNongeneElevation(mismatchLists)
+            #guideAnalysisDict["geneElevation"], guideAnalysisDict["nongeneElevation"] = self.calculateGeneAndNongeneElevation(mismatchLists)
+        else:
+            print("Too many mismatches for this site (greater than %s)" %(args.matchSiteCutoff))
+        guideAnalysisDict["tooManyMismatches"] = self.tooManyMismatches
+        guideAnalysisDict["beforeAltStart"] = args.beforeAltStart
+        guideAnalysisDict["lastExon"] = args.lastExon
+        return guideAnalysisDict
+    
+    def createGuideAnalysisDict(self, reportedMismatchLimit = 5000):
+        print("Formatting data for Azure table")
+        import json
+        import operator
+        guideAnalysisDict = {}
+        guideAnalysisDict["target"] = args.sequence.replace("_","")
+        guideAnalysisDict["azimuth"] = self.azimuthScore
+        guideAnalysisDict["aggregatedOffTarget"] = self.aggregateOffTargetScore
+        assumedIntendedTarget = []
+        mismatchLists = [[]]
+        mismatchListNumber = 0
+        mismatchListCounter = 0
+        #print(self.tooManyMismatches)
+        if not self.tooManyMismatches:
+            multiplePerfectMatches = False
+            multiplePerfectGenicMatches = False
+            if len(self.matches[0]) == 0:
+                assumedIntendedTarget = []  #not actually doing anything of import, but a place holder for organization
+            elif len(self.matches[0]) == 1:
+                assumedIntendedTarget = self.matches[0][0].azureTableMismatchData()
+            else:
+                multiplePerfectMatches = True
+            if multiplePerfectMatches:
+                start = 0
+                skip = 0
+                genicPerfectMatches = []
+                for i in range(0, len(self.matches[0])):
+                    if self.matches[0][i].gene:
+                        genicPerfectMatches.append(i)
+                if len(genicPerfectMatches) > 1:
+                    multiplePerfectGenicMatches = True
+                if genicPerfectMatches:
+                    skip = genicPerfectMatches[0]  #this will either set it to the first (and hopefully only) genic match, or leave it as the first element if there were none
+                assumedIntendedTarget = self.matches[0][skip].azureTableMismatchData()
+            else:
+                start = 1
+            fullMismatchList = []
+            for i in range(start, len(self.matches)):
+                for j in range(0, len(self.matches[i])):
+                    if i == 0 and j == skip:
+                        continue
+                    fullMismatchList.append(self.matches[i][j])
+            guideAnalysisDict["mismatchSiteCount"] = len(fullMismatchList)
+            guideAnalysisDict["truncatedSiteList"] = len(fullMismatchList) > reportedMismatchLimit
+            if fullMismatchList:
+                fullMismatchList.sort(key = operator.attrgetter("elevationScore"), reverse = True)
+            for line in fullMismatchList[0:reportedMismatchLimit]:
+                if mismatchListCounter >= 100:
+                    mismatchLists.append([])
+                    mismatchListCounter = 0
+                    mismatchListNumber += 1
+                mismatchLists[mismatchListNumber].append(line.azureTableMismatchData())
+                mismatchListCounter += 1
+            for i in range(0,mismatchListNumber + 1):
+                guideAnalysisDict["offTargets" + str(i)] = json.dumps(mismatchLists[i])
+            guideAnalysisDict["mismatchListCount"] = len(mismatchLists)
+            guideAnalysisDict["multiplePerfectMatches"] = multiplePerfectMatches
+            guideAnalysisDict["multiplePerfectGenicMatches"] = multiplePerfectGenicMatches
+            guideAnalysisDict["assumedIntendedTarget"] = json.dumps(assumedIntendedTarget)
+            #mismatchList.sort(key = operator.itemgetter(3), reverse = True)
+            #guideAnalysisDict["offTargets"] = zlib.compress(json.dumps(mismatchList).encode(),9)
+            #guideAnalysisDict["geneElevation"], guideAnalysisDict["nongeneElevation"] = self.calculateGeneAndNongeneElevation(mismatchLists)
         else:
             print("Too many mismatches for this site (greater than %s)" %(args.matchSiteCutoff))
         guideAnalysisDict["tooManyMismatches"] = self.tooManyMismatches
@@ -2170,6 +2292,7 @@ class SearchSupervisor(object):
         outputData['matches'] = self.matches
         outputData['azimuthScore'] = self.azimuthScore
         outputData['multiplePerfectMatches'] = self.multiplePerfectMatches
+        outputData['aggregatedOffTarget'] = self.aggregateOffTargetScore
         print(self.matches)
         print(args.sequence)
         print("Starting pickle")
@@ -2195,6 +2318,7 @@ class SearchSupervisor(object):
         self.guideAnalysisDict = self.createGuideAnalysisDict()
         self.guideAnalysisDict["PartitionKey"] = args.partitionKey
         self.guideAnalysisDict["RowKey"] = args.rowKey
+        #print(self.guideAnalysisDict)
         print("Writing data to Azure table")
         failures = 0
         tableHandle = False #initializing this so I can check it in the loop.  If the 
@@ -2202,16 +2326,13 @@ class SearchSupervisor(object):
             try:
                 if not tableHandle:
                     tableHandle = azure.storage.table.TableService(account_name=args.azureTableAccountName, account_key=tableAccountkey)
-                tableHandle.insert_entity(args.azureTableName, self.guideAnalysisDict)
+                tableHandle.insert_or_replace_entity(args.azureTableName, self.guideAnalysisDict)
                 break
-            except azure.common.AzureConflictHttpError:
-                print("Unable to report data to azure, as it has already been reported.", file = sys.stderr)
-                sys.exit(42)  #Exit code indicating a good run with an already reported site.
             except:  #catching all exceptions here and just retrying
                 time.sleep(5)
                 failures += 1
         if failures > 10:
-            tableHandle.insert_entity(args.azureTableName, self.guideAnalysisDict)  #this will try one more write (if it works, that's cool) to generate the appropriate error messages for tracing
+            tableHandle.insert_or_replace_entity(args.azureTableName, self.guideAnalysisDict)  #this will try one more write (if it works, that's cool) to generate the appropriate error messages for tracing
         #self.getBackDataFromAzureTable(tableHandle)
         
     def getBackDataFromAzureTable(self, tableHandle):
@@ -2225,15 +2346,16 @@ class SearchSupervisor(object):
         
     def createMatchTable(self):
         matchTable = {}
-        for i in range(0,args.mismatchTolerance+1):
+        for i in range(0, args.mismatchTolerance+1):
             matchTable[i] = []
         return matchTable
     
     def createColorScheme(self):
         colorScheme = []
-        colors = args.mismatchTolerance + 1 + args.canonicalPAMMismatchRangeExtension
+        colors = args.mismatchTolerance + 1 + args.canonicalPAMMismatchRangeExtension + args.endClip
         if colors > 7:
             increments = 8
+            step = 255//8
         elif colors == 0:
             return ["0,0,0"]
         else:
@@ -2271,7 +2393,7 @@ class TreeNavigator(object):
         progress = 0
         qualified = 0
         for seed in seeds:
-            print("Qualified %s of %s level 1 seeds." %(qualified, progress), end = "\r")
+            # print("Qualified %s of %s level 1 seeds." %(qualified, progress), end = "\r")
             progress += 1
             mismatches = 0
             for i in range(0, seedLength):
@@ -2818,6 +2940,7 @@ class FASTASupervisor(object):
     
     def createJobBash(self, job, workerID = False):
         import os
+        forcePamListArg = ""
         if args.forcePamList:
             forcePamListArg = " --forcePamList " + args.forcePamList
         return pythonInterpreterAbsolutePath + " dsNickFury" + currentVersion + ".py --mode FASTAWorker --workerID " + str(workerID) + " --enumeratedContig " + self.contigDataAsArgument(job.contig) + " --chromosome " + job.contig + " --start " + str(job.start) + " --length " + str(job.end) + " --sequence " + args.sequence + " --inputfile " + os.path.abspath(args.inputfile) + " --genome " + args.genome + " --tempDir " + args.tempDir + " --chunkSize " + str(args.chunkSize) + " --species " + args.species + " --treeLevel1 " + str(args.treeLevel1) + " --treeLevel2 " + str(args.treeLevel2) + " --cacheSize " + str(args.cacheSize) + " --guideExtension " + str(args.guideExtension) + " --pamExtension " + str(args.pamExtension) + " --genomeDirectory " + args.genomeListDirectory.replace(" ",'\ ') + forcePamListArg

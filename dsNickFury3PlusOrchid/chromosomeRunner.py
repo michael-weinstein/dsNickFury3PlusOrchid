@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+import settings
 
 global pythonInterpreterAbsolutePath
-pythonInterpreterAbsolutePath = "/u/local/apps/python/3.4.3/bin/python3"
+pythonInterpreterAbsolutePath = settings.python3_bin
 
 class CheckArgs():  #class that checks arguments and ultimately returns a validated set of arguments to the main program
     
@@ -83,7 +83,7 @@ def main():
         success = False
         failures = 0
         while not success:
-            command = pythonInterpreterAbsolutePath + " ensemblGeneAnalyzer.py -g " + ensg
+            command = pythonInterpreterAbsolutePath + " ensemblGeneAnalyzer.py -g " + ensg + " -c " + args.chromosome
             if args.mock:
                 command += " -m"
             print(command)

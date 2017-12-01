@@ -1,0 +1,15 @@
+.indexJob*
+*~
+\#*\#
+__pycache__
+genomes
+src_genomes
+.idea
+*.swo
+*.swp
+*.pyc
+dependencies/*
+# geneFromLocus.pkl
+# locusGeneCheck.pkl
+
+azureTable.apikey

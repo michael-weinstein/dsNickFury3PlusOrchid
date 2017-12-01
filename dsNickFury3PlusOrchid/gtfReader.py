@@ -75,7 +75,7 @@ def main():
     gene2transcript = {}
     #transcriptStartPosition = {}
     translationStartSite = {}
-    gtFile = open("Homo_sapiens.GRCh38.85.gtf",'r')
+    gtFile = open("Homo_sapiens.GRCh38.88.gtf",'r')
     rawline = gtFile.readline().strip()
     rawline = rawline.strip(";")
     progress = 0
