@@ -5,10 +5,10 @@ the program dsNickFury. This program can be used to locate every potential
 CRISPR/Cas9 target in a genome for a given sgRNA sequence, which can then be
 evaluated for on-target efficacy by our previously published model, Azimuth
 (Doench et al., Nature Biotechnology 2016), and for off-target effects by
-our new predictive model, Elevation.
+our new predictive model, Elevation (Listgarten et al., Nature Biomedical
+Engineering 2018).
 
-See our manuscript for more detail: http://www.biorxiv.org/content/early/2016/12/02/078253.full.pdf+html
-(TODO: update this when revised version is public)
+See our manuscript for more detail: https://www.nature.com/articles/s41551-017-0178-6
 
 ## Setup
 
@@ -28,15 +28,15 @@ dsnickfury/
 is the "dsnickfury" directory, i.e. the repo root.**
 
 To search the human (hg38) genome for potential off-target sites, you will also
-need to download the indexed genome data, available at (TODO: add link and
-command to download).
+need to download the indexed genome data, available at the following link:
+http://download.microsoft.com/download/8/2/1/821D3094-7997-4B69-B221-573480A412E3/crispr_data.zip
 
-**Warning: the human genome data is large (~25GB)**
+**Warning: the human genome data is large (~22GB)**
 
 Next, make a top-level directory for the data dependencies. Then you'll
-need to download the Elevation repository from (TODO: public URL):
+need to download the Elevation repository from the GitHub page:
 
-`git clone (TODO: public URL) dependencies/elevation`
+`git clone https://github.com/Microsoft/Elevation.git dependencies/elevation`
 
 Next, use the scripts in the Elevation repo to generate the data dependencies.
 The documentation for Elevation will walk you through this.
