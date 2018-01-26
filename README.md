@@ -8,7 +8,7 @@ evaluated for on-target efficacy by our previously published model, Azimuth
 our new predictive model, Elevation (Listgarten et al., Nature Biomedical
 Engineering 2018).
 
-See our manuscript for more detail: https://www.nature.com/articles/s41551-017-0178-6
+See our [**manuscript**](https://doi.org/10.1038/s41551-017-0178-6) or [**official project page**](https://www.microsoft.com/en-us/research/project/crispr/) for more detail.
 
 ## Setup
 
