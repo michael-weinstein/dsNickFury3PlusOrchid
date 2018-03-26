@@ -2978,7 +2978,7 @@ class FASTASupervisor(object):
     def submitArrayJob(self, jobArrayLength, jobName):
         import os
         jobRange = " 1-" + str(jobArrayLength - 1) + " "
-        command = "echo \"" + pythonInterpreterAbsolutePath + " arrayWrapper.py -d " + self.tempDir +  os.sep + "fastaSearch\" | qsub -cwd -V -N " + jobName + " -l h_data=4G,time=23:59:00 -e " + os.getcwd() +  "/schedulerOutput/ -o " + os.getcwd() + "/schedulerOutput/ -M mweinste@ucla.edu -m a " + "-t " + jobRange
+        command = "echo \"" + pythonInterpreterAbsolutePath + " arrayWrapper.py -d " + self.tempDir +  os.sep + "fastaSearch\" | qsub -cwd -V -N " + jobName + " -l h_data=4G,time=23:59:00 -e " + os.getcwd() +  "/schedulerOutput/ -o " + os.getcwd() + "/schedulerOutput/ " + "-t " + jobRange
         success = False
         if not args.mock:
             print("Submitting: %s" %(command))
@@ -3194,7 +3194,7 @@ class FASTASupervisor(object):
         import time
         jobName = "binCompile"
         jobRange = " 1-" + str(self.parallelCompileJobs - 1) + " "
-        command = "echo \"" + pythonInterpreterAbsolutePath + " arrayWrapper.py -d " + self.tempDir +  os.sep + "compilerBash\" | qsub -cwd -V -N " + jobName + " -l h_data=8G,time=23:59:00 -e " + os.getcwd() +  "/schedulerOutput/ -o " + os.getcwd() + "/schedulerOutput/ -M mweinste@ucla.edu -m a " + "-t " + jobRange
+        command = "echo \"" + pythonInterpreterAbsolutePath + " arrayWrapper.py -d " + self.tempDir +  os.sep + "compilerBash\" | qsub -cwd -V -N " + jobName + " -l h_data=8G,time=23:59:00 -e " + os.getcwd() +  "/schedulerOutput/ -o " + os.getcwd() + "/schedulerOutput/ " + "-t " + jobRange
         success = False
         if not args.standAlone:
             if not args.mock:
